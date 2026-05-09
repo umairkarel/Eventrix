@@ -1,0 +1,17 @@
+# Secrets
+secrets/*.txt
+secrets/*.json
+
+# Local env
+.env
+
+# Traefik ACME storage (contains private keys)
+traefik/acme.json
+
+# Brainstorming session files
+.superpowers/
+
+Notes/
+Testing/
+docs/
+archive/

@@ -1,0 +1,82 @@
+version: "3.9"
+
+services:
+
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.1.2
+    environment:
+      CONTAINERS: 1
+      NETWORKS: 1
+      POST: 1       # required for Provisioning API to start/stop containers (Plan 2)
+      DELETE: 1     # required for Provisioning API to remove containers (Plan 2)
+      SERVICES: 0
+      TASKS: 0
+      VOLUMES: 0
+      INFO: 0
+      IMAGES: 0
+      BUILD: 0
+      EXEC: 0
+      SWARM: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - socket_proxy
+    restart: unless-stopped
+
+  traefik:
+    image: traefik:v3.1
+    depends_on:
+      - docker-socket-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CF_DNS_API_TOKEN_FILE=/run/secrets/cloudflare_token
+      # Traefik reads TRAEFIK_* env vars and maps them to static config fields
+      - TRAEFIK_CERTIFICATESRESOLVERS_CLOUDFLARE_ACME_EMAIL=${ACME_EMAIL}
+    secrets:
+      - cloudflare_token
+    volumes:
+      - ./traefik/config/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/conf.d:/etc/traefik/conf.d:ro   # Plan 2 changes to :rw (Provisioning API writes client configs here)
+      - traefik_acme:/etc/traefik/acme
+      - traefik_logs:/var/log/traefik
+    networks:
+      - traefik_public
+      - socket_proxy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${BASE_DOMAIN}`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=cloudflare"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@docker"
+      # Generate hash on Linux VM: htpasswd -nb admin yourpassword
+      # Then escape every $ as $$ and set TRAEFIK_DASHBOARD_AUTH in .env
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
+
+networks:
+  socket_proxy:
+    internal: true
+  traefik_public:
+    name: traefik_public
+    driver: bridge
+  gtm_internal:
+    name: gtm_internal
+    driver: bridge
+    internal: true
+
+volumes:
+  traefik_acme:
+  traefik_logs:
+
+secrets:
+  cloudflare_token:
+    file: ./secrets/cloudflare_token.txt

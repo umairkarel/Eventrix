@@ -1,0 +1,6 @@
+[submodule "services/gtm-server"]
+	path = services/gtm-server
+	url = https://github.com/umairkarel/Server-Side-GTM.git
+[submodule "services/proxy-server"]
+	path = services/proxy-server
+	url = ./services/proxy-server
