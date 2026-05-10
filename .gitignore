@@ -8,6 +8,12 @@ secrets/*.json
 # Traefik ACME storage (contains private keys)
 traefik/acme.json
 
+# Local dev TLS certs (mkcert wildcard — contains private key)
+traefik/certs/
+
+# Local-only Traefik dynamic configs — injected via docker-compose.local.yml volume mounts
+traefik/conf.d/local-*.yml
+
 # Brainstorming session files
 .superpowers/
 

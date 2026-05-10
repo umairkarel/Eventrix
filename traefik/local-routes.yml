@@ -1,0 +1,29 @@
+http:
+  routers:
+    dashboard:
+      rule: "Host(`traefik.localtest.me`)"
+      entryPoints:
+        - websecure
+      tls: {}
+      service: api@internal
+      middlewares:
+        - dashboard-auth
+
+    provisioning:
+      rule: "Host(`api.localtest.me`)"
+      entryPoints:
+        - websecure
+      tls: {}
+      service: provisioning-svc
+
+  services:
+    provisioning-svc:
+      loadBalancer:
+        servers:
+          - url: "http://provisioning-api:8000"
+
+  middlewares:
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "admin:$apr1$809fsMnp$3cGzr/3sI5z0QmqI.ThIK1"

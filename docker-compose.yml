@@ -7,12 +7,14 @@ services:
     environment:
       CONTAINERS: 1
       NETWORKS: 1
-      POST: 1       # required for Provisioning API to start/stop containers (Plan 2)
-      DELETE: 1     # required for Provisioning API to remove containers (Plan 2)
+      POST: 1
+      DELETE: 1
       SERVICES: 0
       TASKS: 0
       VOLUMES: 0
-      INFO: 0
+      INFO: 1
+      VERSION: 1
+      PING: 1
       IMAGES: 0
       BUILD: 0
       EXEC: 0
@@ -32,13 +34,12 @@ services:
       - "443:443"
     environment:
       - CF_DNS_API_TOKEN_FILE=/run/secrets/cloudflare_token
-      # Traefik reads TRAEFIK_* env vars and maps them to static config fields
       - TRAEFIK_CERTIFICATESRESOLVERS_CLOUDFLARE_ACME_EMAIL=${ACME_EMAIL}
     secrets:
       - cloudflare_token
     volumes:
       - ./traefik/config/traefik.yml:/etc/traefik/traefik.yml:ro
-      - ./traefik/conf.d:/etc/traefik/conf.d:ro   # Plan 2 changes to :rw (Provisioning API writes client configs here)
+      - ./traefik/conf.d:/etc/traefik/conf.d:rw
       - traefik_acme:/etc/traefik/acme
       - traefik_logs:/var/log/traefik
     networks:
@@ -58,9 +59,60 @@ services:
       - "traefik.http.routers.dashboard.tls.certresolver=cloudflare"
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.middlewares=dashboard-auth@docker"
-      # Generate hash on Linux VM: htpasswd -nb admin yourpassword
-      # Then escape every $ as $$ and set TRAEFIK_DASHBOARD_AUTH in .env
       - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=provisioning
+      - POSTGRES_PASSWORD=provisioning
+      - POSTGRES_DB=provisioning
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - provisioning_internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U provisioning"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  provisioning-api:
+    build: ./services/provisioning-api
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://provisioning:provisioning@postgres:5432/provisioning
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
+      - CF_API_TOKEN_FILE=/run/secrets/cloudflare_token
+      - BASE_DOMAIN=${BASE_DOMAIN}
+      - VM_IP=${VM_IP}
+      - CF_ZONE_ID=${CF_ZONE_ID}
+      - TRAEFIK_CONF_DIR=/traefik/conf.d
+    secrets:
+      - cloudflare_token
+    volumes:
+      - ./traefik/conf.d:/traefik/conf.d:rw
+    networks:
+      - traefik_public
+      - socket_proxy
+      - provisioning_internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.provisioning.rule=Host(`api.${BASE_DOMAIN}`)"
+      - "traefik.http.routers.provisioning.entrypoints=websecure"
+      - "traefik.http.routers.provisioning.tls.certresolver=cloudflare"
+      - "traefik.http.services.provisioning.loadbalancer.server.port=8000"
+      - "traefik.docker.network=traefik_public"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 networks:
   socket_proxy:
@@ -72,10 +124,13 @@ networks:
     name: gtm_internal
     driver: bridge
     internal: true
+  provisioning_internal:
+    internal: true
 
 volumes:
   traefik_acme:
   traefik_logs:
+  postgres_data:
 
 secrets:
   cloudflare_token:

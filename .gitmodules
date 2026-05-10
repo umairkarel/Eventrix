@@ -4,3 +4,6 @@
 [submodule "services/proxy-server"]
 	path = services/proxy-server
 	url = ./services/proxy-server
+[submodule "services/provisioning-api"]
+	path = services/provisioning-api
+	url = ./services/provisioning-api

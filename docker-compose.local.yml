@@ -1,0 +1,45 @@
+version: "3.9"
+
+# Local development override.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+#
+# Prerequisites (run once):
+#   mkdir traefik/certs/local
+#   mkcert -cert-file traefik/certs/local/traefik.me.crt -key-file traefik/certs/local/traefik.me.key "*.localtest.me" localtest.me
+#   echo "local" > secrets/cloudflare_token.txt
+#
+# Then open:
+#   https://api.localtest.me/docs       — Swagger UI
+#   https://traefik.localtest.me        — Traefik dashboard  (admin / Admin@123)
+
+services:
+
+  traefik:
+    environment:
+      # Clear CF vars — not needed locally
+      - CF_DNS_API_TOKEN_FILE=
+      - TRAEFIK_CERTIFICATESRESOLVERS_CLOUDFLARE_ACME_EMAIL=
+    volumes:
+      # Override static config (file provider only, no Docker provider, no CF resolver)
+      - ./traefik/config/traefik.local.yml:/etc/traefik/traefik.yml:ro
+      # Inject local-only configs into conf.d (not in the shared conf.d/ on disk)
+      - ./traefik/local-certs.yml:/etc/traefik/conf.d/local-certs.yml:ro
+      - ./traefik/local-routes.yml:/etc/traefik/conf.d/local-routes.yml:ro
+      # Mount mkcert wildcard cert
+      - ./traefik/certs/local:/certs:ro
+
+  postgres:
+    ports:
+      - "5432:5432"
+
+  provisioning-api:
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://provisioning:provisioning@postgres:5432/provisioning
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
+      - CF_API_TOKEN_FILE=
+      - CF_API_TOKEN=local
+      - CF_ZONE_ID=local
+      - BASE_DOMAIN=localtest.me
+      - VM_IP=127.0.0.1
+      - TRAEFIK_CONF_DIR=/traefik/conf.d
+      - MOCK_CLOUDFLARE=true
