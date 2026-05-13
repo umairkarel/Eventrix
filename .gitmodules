@@ -1,9 +1,9 @@
 [submodule "services/gtm-server"]
 	path = services/gtm-server
-	url = https://github.com/umairkarel/Server-Side-GTM.git
+	url = https://github.com/umairkarel/Eventrix-Server-Side-GTM.git
 [submodule "services/proxy-server"]
 	path = services/proxy-server
-	url = ./services/proxy-server
+	url = https://github.com/umairkarel/Eventrix-Proxy-Server.git
 [submodule "services/provisioning-api"]
 	path = services/provisioning-api
-	url = ./services/provisioning-api
+	url = https://github.com/umairkarel/Eventrix-Provisioning-API.git
