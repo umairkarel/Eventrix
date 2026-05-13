@@ -15,7 +15,7 @@ services:
       INFO: 1
       VERSION: 1
       PING: 1
-      IMAGES: 0
+      IMAGES: 1
       BUILD: 0
       EXEC: 0
       SWARM: 0
@@ -88,6 +88,9 @@ services:
       - VM_IP=${VM_IP}
       - CF_ZONE_ID=${CF_ZONE_ID}
       - TRAEFIK_CONF_DIR=/traefik/conf.d
+      - TRAEFIK_RESTART_ON_CONFIG_CHANGE=${TRAEFIK_RESTART_ON_CONFIG_CHANGE:-false}
+      - MOCK_CLOUDFLARE=${MOCK_CLOUDFLARE:-false}
+      - PREVIEW_USE_SIDECAR=${PREVIEW_USE_SIDECAR:-false}
     secrets:
       - cloudflare_token
     volumes:
