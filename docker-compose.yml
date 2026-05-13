@@ -78,6 +78,16 @@ services:
       timeout: 5s
       retries: 5
 
+  proxy-server:
+    build: ./services/proxy-server
+    container_name: proxy-server
+    environment:
+      - BASE_DOMAIN=${BASE_DOMAIN}
+      - GTM_PORT=8080
+    networks:
+      - traefik_public
+    restart: unless-stopped
+
   provisioning-api:
     build: ./services/provisioning-api
     environment:
