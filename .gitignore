@@ -11,7 +11,8 @@ traefik/acme.json
 # Local dev TLS certs (mkcert wildcard — contains private key)
 traefik/certs/
 
-# Local-only Traefik dynamic configs — injected via docker-compose.local.yml volume mounts
+# Traefik dynamic configs — generated at runtime by provisioning API, never committed
+traefik/conf.d/client-*.yml
 traefik/conf.d/local-*.yml
 
 # Brainstorming session files
