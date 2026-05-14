@@ -40,6 +40,7 @@ services:
     volumes:
       - ./traefik/config/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/conf.d:/etc/traefik/conf.d:rw
+      - ./traefik/certs/local:/certs:ro
       - traefik_acme:/etc/traefik/acme
       - traefik_logs:/var/log/traefik
     networks:

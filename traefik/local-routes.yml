@@ -26,4 +26,4 @@ http:
     dashboard-auth:
       basicAuth:
         users:
-          - "admin:$apr1$809fsMnp$3cGzr/3sI5z0QmqI.ThIK1"
+          - "admin:$2y$05$DqdjcbkMIYKcHPXzzN5YiePBzhcFT55pthIWYA.ZP2SxuSY0S3iJK" # admin123
